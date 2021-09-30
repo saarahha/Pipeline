@@ -4,7 +4,7 @@
 Pipeline for real-time data reduction and image subtraction.
 '''
 
-__version__ = "1.0" #last updated 28/09/2021
+__version__ = "1.1" #last updated 29/09/2021
 
 import sys
 import numpy as np
@@ -94,9 +94,10 @@ class MyLogger(object):
     Logger to control logging and uploading to slack.
     '''
 
-    def __init__(self, log, log_stream):
+    def __init__(self, log, log_stream, telescope):
         self._log = log
         self._log_stream = log_stream
+        self._telescope = telescope
 
     def info(self, text):
         '''
@@ -117,11 +118,12 @@ class MyLogger(object):
         self._log.critical(text)
         message = self._log_stream.getvalue()
         try:
-            self.slack('pipeline',text) #upload to slack
+            tel = importlib.import_module(self._telescope)
+            self.slack('pipeline',text,tel) #upload to slack
         except SlackApiError as e:
             self._log.error('Connection error: failed to connect to slack. Above meassage not uploaded.') #if connection error occurs, add to log
 
-    def slack(self, channel, message):
+    def slack(self, channel, message, tel):
         '''
         Slack bot for uploading messages to slack.
         '''
@@ -400,7 +402,7 @@ def main(telescope=None,date=None,cpu=None):
     streamhandler_slack = logging.StreamHandler(log_stream) #add log stream to logger
     streamhandler_slack.setFormatter(formatter) #add format to log stream
     log.addHandler(streamhandler_slack) #link logger to log stream
-    logger = MyLogger(log,log_stream) #load logger handler
+    logger = MyLogger(log,log_stream,telescope) #load logger handler
 
     try:
         q.put(logger.info('Running pipeline version '+__version__+', with setting file version '+tel.__version__+'.')) #add pipeline version to log file
